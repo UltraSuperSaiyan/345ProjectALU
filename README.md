@@ -114,10 +114,24 @@ begin
 					rd <= x"00000000000000000000000000000000";		 --BCW
 				
 				when "0111" =>
-					rd <= x"00000000000000000000000000000000";		 --MAXWS	
-				
+					-- MAXWS: Max signed word for each 32-bit slot
+					for i in 0 to 3 loop
+						if signed(rs1(31 + i * 32 downto i * 32)) >= signed(rs2(31 + i * 32 downto i * 32)) then
+							rd(31 + i * 32 downto i * 32) <= rs1(31 + i * 32 downto i * 32);
+						else
+							rd(31 + i * 32 downto i * 32) <= rs2(31 + i * 32 downto i * 32);
+						end if;
+					end loop;
+
 				when "1000" =>
-					rd <= x"00000000000000000000000000000000";		 --MINWS
+					-- MINWS: Min signed word for each 32-bit slot
+					for i in 0 to 3 loop
+						if signed(rs1(31 + i * 32 downto i * 32)) <= signed(rs2(31 + i * 32 downto i * 32)) then
+							rd(31 + i * 32 downto i * 32) <= rs1(31 + i * 32 downto i * 32);
+						else
+							rd(31 + i * 32 downto i * 32) <= rs2(31 + i * 32 downto i * 32);
+						end if;
+					end loop;
 				
 				when "1001" =>
 					rd <= x"00000000000000000000000000000000";		 --MLHU
@@ -152,5 +166,4 @@ begin
 	
 	
 end alu_arch;
-
 
