@@ -28,7 +28,8 @@ begin
 	
 	process (rs1, rs2, rs3, operation) is 	  
 	  
-		variable var1 : std_logic_vector(31 downto 0); 
+		variable var1 : std_logic_vector(31 downto 0); 	 
+		variable sum : signed(31 downto 0);
 	
 	
 	begin
@@ -105,10 +106,35 @@ begin
 					rd <= x"00000000000000000000000000000000";		 --CNT1H
 				
 				when "0100" =>
-					rd <= x"00000000000000000000000000000000";		 --AHS
+																 --AHS
+					-- we have 8 separate 16-bit halfwords
+					for i in 0 to 7 loop
+						
+						sum := signed(rs1((16*i + 15) downto 16*i)) + signed(rs2((16*i + 15) downto 16*i)); 
+						
+						if (signed(rs1((16*i + 15) downto 16*i)) > 0 and 
+							signed(rs2((16*i + 15) downto 16*i)) > 0 and sum < 0) then
+							
+							 rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(32767, 16)); 
+							
+						elsif (signed(rs1((16*i + 15) downto 16*i)) < 0 
+							and signed(rs1((16*i + 15) downto 16*i)) > 0 and sum > 0) then
+							
+							rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(-32768, 16)); 
+							
+						else
+							
+							rd((16*i + 15) downto 16*i) <= std_logic_vector(sum); 
+							
+						end if;
+						
+					end loop;
 					
+					
+					
+																 
 				when "0101" =>
-					rd <= rs1 and rs2;								 --AND
+					rd <= rs1 and rs2;							 --AND
 				
 				when "0110" =>
 					rd <= x"00000000000000000000000000000000";		 --BCW
@@ -126,7 +152,7 @@ begin
 					rd <= x"00000000000000000000000000000000";		 --MLHCU
 				
 				when "1011" =>
-					rd <= rs1 or rs2;									 --OR
+					rd <= rs1 or rs2;								 --OR
 				
 				when "1100" =>
 					rd <= x"00000000000000000000000000000000";		 --CLZH
