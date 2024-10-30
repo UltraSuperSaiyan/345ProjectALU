@@ -26,14 +26,15 @@ architecture alu_arch of multimedia_alu is
 -- do we need signals? or variables?
 begin
 	
-	process (rs1, rs2, rs3, operation) is 	  
-	  
+	process (rs1, rs2, rs3, operation) is 	     
+		
 		variable var1 : std_logic_vector(31 downto 0); 	 
 		variable sum : signed(15 downto 0);	 
 		variable sum_uns : unsigned(31 downto 0);
 		variable count : unsigned(15 downto 0) := x"0000";	   
 		variable loop_cont : integer := 0;
-	
+		variable num : integer := 0;
+		
 	
 	begin
 	
@@ -104,23 +105,29 @@ begin
 					
 					loop_cont := to_integer(unsigned(rs2(3 downto 0)));
 					
-					
-					for i in 0 to 7 loop
+					for i in 0 to 7 loop   
+						num := 0;
 						
+						while num < loop_cont loop	
+							
+							rd(16*i + num) <= '0';
+							
+							num := num + 1;
+						end loop; 
 						
-						for j in (16*i + 15) to (16*i + 1) loop	
+						while num < 16 loop
+						   
+							rd(16*i + num + loop_cont) <= rs1(16*i + num);
 							
-							
-							
+							num := num + 1;
 						end loop;
-						
-						
+		
+					end loop;	
 					
-					end loop;
 																 
-				when "0010" =>	--AU
-    				for i in 0 to 3 loop
-        -- Perform unsigned addition for each 32-bit segment
+				when "0010" =>
+					for i in 0 to 3 loop
+       				 -- Perform unsigned addition for each 32-bit segment   	
        					sum_uns := unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)) +
 							unsigned(rs2((32 * (i + 1) - 1) downto 32 * i));	  
 						
@@ -131,6 +138,7 @@ begin
 							end if; 
 							
    					 end loop;
+				
 				
 				when "0011" =>									 
 					--CNT1H
@@ -231,16 +239,39 @@ begin
 					end loop;    
 																 
 																 
-				when "1101" =>
-					rd <= x"00000000000000000000000000000000";		 --RLH
+				when "1101" =>	  
+					-- just making sure, each 16-bit halfword is rotated and not 32-bit word, right??
+					--RLH
+					
+					for i in 0 to 7 loop   
+						num := 0;	  
+						loop_cont := to_integer(unsigned(rs2((16*i + 3) downto 16*i)));
+						
+						while num < loop_cont loop	
+							
+							rd(16*i + num) <= rd(16*i + 16 - loop_cont + num);	 
+							
+							num := num + 1;
+						end loop; 
+						
+						while num < 16 loop
+						   
+							rd(16*i + num + loop_cont) <= rs1(16*i + num);
+							
+							num := num + 1;
+						end loop;
+		
+					end loop;	
+					
 				
-				when "1110" =>	  --SFWU
+				when "1110" =>
 					for i in 0 to 3 loop
-        -- Perform unsigned subtraction for each 32-bit segment
-        			rd((32 * (i + 1) - 1) downto 32 * i) <= 
-            			std_logic_vector(unsigned(rs2((32 * (i + 1) - 1) downto 32 * i)) -
-                             unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)));
-   				 end loop;		
+        				-- Perform unsigned subtraction for each 32-bit segment
+        					rd((32 * (i + 1) - 1) downto 32 * i) <= 
+            					std_logic_vector(unsigned(rs2((32 * (i + 1) - 1) downto 32 * i)) -
+                           	unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)));
+							   
+   					end loop;	
 				
 				when "1111" =>
 					rd <= x"00000000000000000000000000000000";		 --SFHS
@@ -257,4 +288,5 @@ begin
 	
 	
 end alu_arch;
+
 
