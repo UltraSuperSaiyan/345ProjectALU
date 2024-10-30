@@ -1,4 +1,4 @@
-[
+
 
 
 library IEEE;
@@ -18,18 +18,20 @@ entity multimedia_alu is
 end multimedia_alu;
 
 
+  -- SHOULD WE USE LOOPS INSIDE CASE STATEMENTS? OR REPLACE THE CASE WITH IF STATEMENTS
+
 
 architecture alu_arch of multimedia_alu is
 
 -- do we need signals? or variables?
 begin
-													 
-	
 	
 	process (rs1, rs2, rs3, operation) is 	  
 	  
 		variable var1 : std_logic_vector(31 downto 0); 	 
-		variable sum : signed(31 downto 0);
+		variable sum : signed(31 downto 0);	 
+		variable count : unsigned(15 downto 0) := x"0000";	   
+		variable loop_cont : integer := 0;
 	
 	
 	begin
@@ -68,7 +70,7 @@ begin
 					rd(127 downto 112) <= operation(20 downto 5);
 				
 				when others =>
-					rd <= x"00000000000000000000000000000000";		 --temp		  
+					var1 := x"00000000";		 --temp		  
 				
 			end case;
 			
@@ -93,20 +95,47 @@ begin
 			--ex: xxxx0000
 			
 			case operation(18 downto 15) is
-				when "0000" =>										 -- NOP
+				when "0000" =>									 -- NOP
 					var1 := x"00000000";		 --temp
 				
 				when "0001" =>
-					rd <= x"00000000000000000000000000000000";		 --SLHI
-				
+					--SLHI
+					
+					loop_cont := to_integer(unsigned(rs2(3 downto 0)));
+					
+					
+					for i in 0 to 7 loop
+						
+						
+						for j in (16*i + 15) to (16*i + 1) loop	
+							
+							
+							
+						end loop;
+						
+						
+					
+					end loop;
+																 
 				when "0010" =>
 					rd <= x"00000000000000000000000000000000";		 --AU
 				
-				when "0011" =>
-					rd <= x"00000000000000000000000000000000";		 --CNT1H
-				
+				when "0011" =>									 
+					--CNT1H
+					for i in 0 to 7 loop 
+						count := x"0000";
+						
+						for j in 0 to 15 loop	
+							if (rs1(16*i + j) = '1') then
+								count := count + 1;
+							end if;
+						end loop; 
+						
+						rd((16*i + 15) downto 16*i) <= std_logic_vector(count);
+					end loop; 
+					
 				when "0100" =>
-																 --AHS
+					--AHS
 					-- we have 8 separate 16-bit halfwords
 					for i in 0 to 7 loop
 						
@@ -130,11 +159,10 @@ begin
 						
 					end loop;
 					
-					
-					
 																 
 				when "0101" =>
-					rd <= rs1 and rs2;							 --AND
+					--AND
+					rd <= rs1 and rs2;							 
 				
 				when "0110" =>
 					-- BCW: Broadcast the rightmost 32-bit word of rs1 to each 32-bit slot of rd
@@ -151,7 +179,7 @@ begin
 							rd(31 + i * 32 downto i * 32) <= rs2(31 + i * 32 downto i * 32);
 						end if;
 					end loop;
-
+				
 				when "1000" =>
 					-- MINWS: Min signed word for each 32-bit slot
 					for i in 0 to 3 loop
@@ -168,12 +196,29 @@ begin
 				when "1010" =>
 					rd <= x"00000000000000000000000000000000";		 --MLHCU
 				
-				when "1011" =>
-					rd <= rs1 or rs2;								 --OR
+				when "1011" =>	
+					--OR
+					rd <= rs1 or rs2;								
 				
 				when "1100" =>
-					rd <= x"00000000000000000000000000000000";		 --CLZH
-				
+					--CLZH
+					for i in 0 to 7 loop 
+						count := x"0000";
+						loop_cont := 0;
+						
+						while (16*i + 15 - loop_cont) >= 0 loop	 
+							if (rs1(16*i + 15 - loop_cont) = '0') then 
+								count := count + 1;
+								loop_cont := loop_cont + 1;		
+							else
+								exit;
+							end if; 
+						end loop; 
+						
+						rd((16*i + 15) downto 16*i) <= std_logic_vector(count);
+					end loop;    
+																 
+																 
 				when "1101" =>
 					rd <= x"00000000000000000000000000000000";		 --RLH
 				
@@ -196,4 +241,4 @@ begin
 	
 end alu_arch;
 
-](https://github.com/SkrtSkrtSkrtttt/345ProjectALU)
+
