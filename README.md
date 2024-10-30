@@ -29,7 +29,8 @@ begin
 	process (rs1, rs2, rs3, operation) is 	  
 	  
 		variable var1 : std_logic_vector(31 downto 0); 	 
-		variable sum : signed(31 downto 0);	 
+		variable sum : signed(15 downto 0);	 
+		variable sum_uns : unsigned(31 downto 0);
 		variable count : unsigned(15 downto 0) := x"0000";	   
 		variable loop_cont : integer := 0;
 	
@@ -117,8 +118,19 @@ begin
 					
 					end loop;
 																 
-				when "0010" =>
-					rd <= x"00000000000000000000000000000000";		 --AU
+				when "0010" =>	--AU
+    				for i in 0 to 3 loop
+        -- Perform unsigned addition for each 32-bit segment
+       					sum_uns := unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)) +
+							unsigned(rs2((32 * (i + 1) - 1) downto 32 * i));	  
+						
+							if (sum_uns > unsigned(x"FFFFFFFF")) then 		 --overflow
+								rd((32 * (i + 1) - 1) downto 32 * i) <= x"FFFFFFFF";	
+							else 
+								rd((32 * (i + 1) - 1) downto 32 * i) <= std_logic_vector(sum_uns);
+							end if; 
+							
+   					 end loop;
 				
 				when "0011" =>									 
 					--CNT1H
@@ -222,8 +234,13 @@ begin
 				when "1101" =>
 					rd <= x"00000000000000000000000000000000";		 --RLH
 				
-				when "1110" =>
-					rd <= x"00000000000000000000000000000000";		 --SFWU
+				when "1110" =>	  --SFWU
+					for i in 0 to 3 loop
+        -- Perform unsigned subtraction for each 32-bit segment
+        			rd((32 * (i + 1) - 1) downto 32 * i) <= 
+            			std_logic_vector(unsigned(rs2((32 * (i + 1) - 1) downto 32 * i)) -
+                             unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)));
+   				 end loop;		
 				
 				when "1111" =>
 					rd <= x"00000000000000000000000000000000";		 --SFHS
@@ -240,5 +257,4 @@ begin
 	
 	
 end alu_arch;
-
 
