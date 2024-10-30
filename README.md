@@ -111,7 +111,10 @@ begin
 					rd <= rs1 and rs2;								 --AND
 				
 				when "0110" =>
-					rd <= x"00000000000000000000000000000000";		 --BCW
+					-- BCW: Broadcast the rightmost 32-bit word of rs1 to each 32-bit slot of rd
+					for i in 0 to 3 loop
+						rd(31 + i * 32 downto i * 32) <= rs1(31 downto 0);
+					end loop;
 				
 				when "0111" =>
 					-- MAXWS: Max signed word for each 32-bit slot
