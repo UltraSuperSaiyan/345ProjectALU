@@ -29,8 +29,8 @@ begin
 	process (rs1, rs2, rs3, operation) is 	     
 		
 		variable var1 : std_logic_vector(31 downto 0); 
-		variable mult_int, sum_int : signed(31 downto 0);
-		variable mult_long, sum_long : signed(63 downto 0);
+		variable mult_int, sum_int, dif_int : signed(31 downto 0);
+		variable mult_long, sum_long, dif_long : signed(63 downto 0);
 		variable sum, dif : signed(15 downto 0);
 		variable sum_uns, dif_uns : unsigned(31 downto 0); 
 		variable count : unsigned(15 downto 0) := x"0000";	   
@@ -132,11 +132,51 @@ begin
 				
 				when "010" =>
 				--Signed Integer Multiply-Subtract Low with Saturation	
-				
+					for i in 0 to 7 loop 
+					
+						mult_int := signed( rs2((32*i + 15) downto 32*i) ) * 
+							signed( rs3((32*i + 15) downto 32*i) );  
+						
+						dif_int := signed(rs1((32*i + 31) downto 32*i)) - mult_int; 
+						
+						if (signed(rs1((32*i + 31) downto 32*i)) > 0 and 
+							mult_int < 0 and dif_int < 0) then
+							--check for overflow
+							rd((32*i + 31) downto 32*i) <= x"7FFFFFFF"; 
+							
+						elsif (signed(rs1((32*i + 31) downto 32*i)) < 0 and 
+							mult_int > 0 and dif_int > 0) then
+							--check for underflow
+							rd((32*i + 31) downto 32*i) <= x"80000000";  
+							
+						else
+							rd((32*i + 31) downto 32*i) <= std_logic_vector(dif_int);
+						end if;
+					end loop;	
 				
 				when "011" =>
 				--Signed Integer Multiply-Subtract High with Saturation	
-				
+					for i in 0 to 7 loop 
+					
+						mult_int := signed( rs2((32*i + 31) downto (32*i + 15)) ) * 
+							signed( rs3( (32*i + 31) downto (32*i + 15)) );  
+						
+						dif_int := signed(rs1((32*i + 31) downto 32*i)) - mult_int; 
+						
+						if (signed(rs1((32*i + 31) downto 32*i)) > 0 and 
+							mult_int < 0 and dif_int < 0) then
+							--check for overflow
+							rd((32*i + 31) downto 32*i) <= x"7FFFFFFF"; 
+							
+						elsif (signed(rs1((32*i + 31) downto 32*i)) < 0 and 
+							mult_int > 0 and dif_int > 0) then
+							--check for underflow
+							rd((32*i + 31) downto 32*i) <= x"80000000";  
+							
+						else
+							rd((32*i + 31) downto 32*i) <= std_logic_vector(dif_int);
+						end if;
+					end loop;
 				
 				when "100" =>
 				--Signed Long Integer Multiply-Add Low with Saturation 
@@ -188,11 +228,50 @@ begin
 				
 				when "110" =>									  
 				--Signed Long Integer Multiply-Subtract Low with Saturation
-				
+					for i in 0 to 1 loop 
+					
+						mult_long := signed( rs2((64*i + 31) downto 64*i) ) * 
+							signed( rs3((64*i + 31) downto 64*i) );  
+							
+						dif_long := signed(rs1((64*i + 63) downto 64*i)) - mult_long; 
+						
+						if (signed(rs1((64*i + 63) downto 64*i)) > 0 and 
+							mult_long < 0 and dif_long < 0) then
+							--check for overflow
+							rd((64*i + 63) downto 64*i) <= x"7FFFFFFFFFFFFFFF"; 
+							
+						elsif (signed(rs1((64*i + 63) downto 64*i)) < 0 and 
+							mult_long > 0 and dif_long > 0) then
+							--check for underflow
+							rd((64*i + 63) downto 64*i) <= x"8000000000000000"; 
+						else 
+							rd((64*i + 63) downto 64*i) <= std_logic_vector(dif_long); 
+						end if;
+					end loop;
 				
 				when "111" =>
-				--Signed Long Integer Multiply-Subtract High with Saturation	
-				
+					--Signed Long Integer Multiply-Subtract High with Saturation	
+					for i in 0 to 1 loop 
+					
+						mult_long := signed( rs2((64*i + 63) downto (64*i + 32)) ) * 
+							signed( rs3((64*i + 63) downto (64*i + 32)) );  
+							
+						dif_long := signed(rs1((64*i + 63) downto 64*i)) - mult_long; 
+						
+						if (signed(rs1((64*i + 63) downto 64*i)) > 0 and 
+							mult_long < 0 and dif_long < 0) then
+							--check for overflow
+							rd((64*i + 63) downto 64*i) <= x"7FFFFFFFFFFFFFFF"; 
+							
+						elsif (signed(rs1((64*i + 63) downto 64*i)) < 0 and 
+							mult_long > 0 and dif_long > 0) then
+							--check for underflow
+							rd((64*i + 63) downto 64*i) <= x"8000000000000000"; 
+							
+						else 
+							rd((64*i + 63) downto 64*i) <= std_logic_vector(dif_long); 
+						end if;
+					end loop;
 				
 				when others => 
 					var1 := x"00000000";		 --temp
@@ -375,10 +454,10 @@ begin
 					--SFWU
 					for i in 0 to 3 loop
        				 -- Perform unsigned subtraction for each 32-bit segment   	
-       					dif_uns := unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)) -
-							unsigned(rs2((32 * (i + 1) - 1) downto 32 * i));	  
+       					dif_uns := unsigned(rs2((32 * (i + 1) - 1) downto 32 * i)) -
+							unsigned(rs1((32 * (i + 1) - 1) downto 32 * i));	  
 						
-							if (dif_uns < unsigned(x"00000000")) then 		 --overflow
+							if (dif_uns < unsigned(x"00000000")) then 		 --underflow
 								rd((32 * (i + 1) - 1) downto 32 * i) <= x"00000000";	
 							else 
 								rd((32 * (i + 1) - 1) downto 32 * i) <= std_logic_vector(dif_uns);
@@ -387,17 +466,18 @@ begin
 				
 				when "1111" =>
 					--SFHS
+					--rd = rs2 - rs1
 					for i in 0 to 7 loop
-						dif := signed(rs1((16*i + 15) downto 16*i)) - signed(rs2((16*i + 15) downto 16*i)); 
+						dif := signed(rs2((16*i + 15) downto 16*i)) - signed(rs1((16*i + 15) downto 16*i)); 
 						
-						if (signed(rs1((16*i + 15) downto 16*i)) > 0 and 
-							signed(rs2((16*i + 15) downto 16*i)) > 0 and dif < 0) then
-							
+						if (signed(rs2((16*i + 15) downto 16*i)) > 0 and 
+							signed(rs1((16*i + 15) downto 16*i)) < 0 and dif < 0) then
+							 --check for overflow
 							 rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(32767, 16)); 
 							
-						elsif (signed(rs1((16*i + 15) downto 16*i)) < 0 
+						elsif (signed(rs2((16*i + 15) downto 16*i)) < 0 
 							and signed(rs1((16*i + 15) downto 16*i)) > 0 and dif > 0) then
-							
+							--check for underflow
 							rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(-32768, 16)); 
 							
 						else
