@@ -28,9 +28,11 @@ begin
 	
 	process (rs1, rs2, rs3, operation) is 	     
 		
-		variable var1 : std_logic_vector(31 downto 0); 	 
-		variable sum : signed(15 downto 0);	 
-		variable sum_uns : unsigned(31 downto 0);
+		variable var1 : std_logic_vector(31 downto 0); 
+		variable mult_int, sum_int : signed(31 downto 0);
+		variable mult_long, sum_long : signed(63 downto 0);
+		variable sum, dif : signed(15 downto 0);
+		variable sum_uns, dif_uns : unsigned(31 downto 0); 
 		variable count : unsigned(15 downto 0) := x"0000";	   
 		variable loop_cont : integer := 0;
 		variable num : integer := 0;
@@ -79,16 +81,124 @@ begin
 		elsif (operation(24 downto 23) = "10") then	  
 			--Multiply-Add and Multiply-Subtract R4-Instruction Format
 			
-			
-			if (operation(22) = '0') then
-				
-				
-			elsif (operation(22) = '1') then
+			case operation(22 downto 20) is
+				when "000" =>
+				--Signed Integer Multiply-Add Low with Saturation
+					for i in 0 to 3 loop 
+						mult_int := signed( rs2((32*i + 15) downto 32*i) ) * 
+							signed( rs3((32*i + 15) downto 32*i) );  
+							
+						sum_int := signed(rs1((32*i + 31) downto 32*i)) + mult_int; 
+						
+						if (signed(rs1((32*i + 31) downto 32*i)) > 0 and 
+							mult_int > 0 and sum_int < 0) then
+							
+							 rd((32*i + 31) downto 32*i) <= x"7FFFFFFF"; 
+							
+						elsif (signed(rs1((32*i + 31) downto 32*i)) < 0 and 
+							mult_int < 0 and sum_int > 0) then
+							
+							rd((32*i + 31) downto 32*i) <= x"80000000"; 
+							
+						else 
+							rd((32*i + 31) downto 32*i) <= std_logic_vector(sum_int); 
+						end if;	
+					end loop;
 					
 				
-			end if;
-			
-			
+				when "001" =>
+				--Signed Integer Multiply-Add High with Saturation 
+					for i in 0 to 3 loop 
+					
+						mult_int := signed( rs2((32*i + 31) downto (32*i + 15)) ) * 
+							signed( rs3((32*i + 31) downto (32*i + 15)) );  
+							
+						sum_int := signed(rs1((32*i + 31) downto 32*i)) + mult_int; 
+						
+						if (signed(rs1((32*i + 31) downto 32*i)) > 0 and 
+							mult_int > 0 and sum_int < 0) then
+							
+							 rd((32*i + 31) downto 32*i) <= x"7FFFFFFF"; 
+							
+						elsif (signed(rs1((32*i + 31) downto 32*i)) < 0 and 
+							mult_int < 0 and sum_int > 0) then
+							
+							rd((32*i + 31) downto 32*i) <= x"80000000"; 
+							
+						else 
+							rd((32*i + 31) downto 32*i) <= std_logic_vector(sum_int); 
+						end if;
+					end loop;
+				
+				when "010" =>
+				--Signed Integer Multiply-Subtract Low with Saturation	
+				
+				
+				when "011" =>
+				--Signed Integer Multiply-Subtract High with Saturation	
+				
+				
+				when "100" =>
+				--Signed Long Integer Multiply-Add Low with Saturation 
+					for i in 0 to 1 loop 
+					
+						mult_long := signed( rs2((64*i + 31) downto 64*i) ) * 
+							signed( rs3((64*i + 31) downto 64*i) );  
+							
+						sum_long := signed(rs1((64*i + 63) downto 64*i)) + mult_long; 
+						
+						if (signed(rs1((64*i + 63) downto 64*i)) > 0 and 
+							mult_long > 0 and sum_long < 0) then
+							
+							 rd((64*i + 63) downto 64*i) <= x"7FFFFFFFFFFFFFFF"; 
+							
+						elsif (signed(rs1((64*i + 63) downto 64*i)) < 0 and 
+							mult_long < 0 and sum_long > 0) then
+							
+							rd((64*i + 63) downto 64*i) <= x"8000000000000000"; 
+							
+						else 
+							rd((64*i + 63) downto 64*i) <= std_logic_vector(sum_long); 
+						end if;
+					end loop;
+				
+				when "101" =>
+				--Signed Long Integer Multiply-Add High with Saturation	 
+					for i in 0 to 1 loop 
+					
+						mult_long := signed( rs2((64*i + 63) downto (64*i + 32)) ) * 
+							signed( rs3((64*i + 63) downto (64*i + 32)) );  
+							
+						sum_long := signed(rs1((64*i + 63) downto 64*i)) + mult_long; 
+						
+						if (signed(rs1((64*i + 63) downto 64*i)) > 0 and 
+							mult_long > 0 and sum_long < 0) then
+							
+							 rd((64*i + 63) downto 64*i) <= x"7FFFFFFFFFFFFFFF"; 
+							
+						elsif (signed(rs1((64*i + 63) downto 64*i)) < 0 and 
+							mult_long < 0 and sum_long > 0) then
+							
+							rd((64*i + 63) downto 64*i) <= x"8000000000000000"; 
+							
+						else 
+							rd((64*i + 63) downto 64*i) <= std_logic_vector(sum_long); 
+						end if;
+					end loop;	  
+				
+				when "110" =>									  
+				--Signed Long Integer Multiply-Subtract Low with Saturation
+				
+				
+				when "111" =>
+				--Signed Long Integer Multiply-Subtract High with Saturation	
+				
+				
+				when others => 
+					var1 := x"00000000";		 --temp
+				
+			end case;	 
+				
 		elsif (operation(24 downto 23) = "11") then	   
 			--R3-Instruction Format							   
 			
@@ -97,35 +207,32 @@ begin
 			--ex: xxxx0000
 			
 			case operation(18 downto 15) is
-				when "0000" =>									 -- NOP
+				when "0000" =>									 
+					-- NOP
 					var1 := x"00000000";		 --temp
 				
 				when "0001" =>
 					--SLHI
-					
 					loop_cont := to_integer(unsigned(rs2(3 downto 0)));
 					
 					for i in 0 to 7 loop   
 						num := 0;
 						
 						while num < loop_cont loop	
-							
 							rd(16*i + num) <= '0';
-							
 							num := num + 1;
 						end loop; 
 						
 						while num < 16 loop
-						   
 							rd(16*i + num + loop_cont) <= rs1(16*i + num);
-							
 							num := num + 1;
 						end loop;
 		
 					end loop;	
 					
 																 
-				when "0010" =>
+				when "0010" =>	  
+					--AU
 					for i in 0 to 3 loop
        				 -- Perform unsigned addition for each 32-bit segment   	
        					sum_uns := unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)) +
@@ -135,10 +242,8 @@ begin
 								rd((32 * (i + 1) - 1) downto 32 * i) <= x"FFFFFFFF";	
 							else 
 								rd((32 * (i + 1) - 1) downto 32 * i) <= std_logic_vector(sum_uns);
-							end if; 
-							
+							end if; 	
    					 end loop;
-				
 				
 				when "0011" =>									 
 					--CNT1H
@@ -158,7 +263,6 @@ begin
 					--AHS
 					-- we have 8 separate 16-bit halfwords
 					for i in 0 to 7 loop
-						
 						sum := signed(rs1((16*i + 15) downto 16*i)) + signed(rs2((16*i + 15) downto 16*i)); 
 						
 						if (signed(rs1((16*i + 15) downto 16*i)) > 0 and 
@@ -171,15 +275,11 @@ begin
 							
 							rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(-32768, 16)); 
 							
-						else
-							
+						else 	
 							rd((16*i + 15) downto 16*i) <= std_logic_vector(sum); 
-							
-						end if;
-						
+						end if;	
 					end loop;
-					
-																 
+													 
 				when "0101" =>
 					--AND
 					rd <= rs1 and rs2;							 
@@ -211,11 +311,23 @@ begin
 					end loop;
 				
 				when "1001" =>
-					rd <= x"00000000000000000000000000000000";		 --MLHU
+					--MLHU		  
+					for i in 0 to 3 loop 
+					
+						rd((32*i + 31) downto 32*i) <= 
+							std_logic_vector( unsigned( rs1((32*i + 15) downto 32*i) ) * 
+								unsigned( rs2((32*i + 15) downto 32*i) ) ); 
+					end loop;
 				
 				when "1010" =>
-					rd <= x"00000000000000000000000000000000";		 --MLHCU
-				
+					--MLHCU
+					for i in 0 to 3 loop 
+						
+						rd((32*i + 31) downto 32*i) <= 
+							std_logic_vector( unsigned( rs1((32*i + 15) downto 32*i) ) * 
+								unsigned( operation(14 downto 10) ) ); 
+					end loop;
+					
 				when "1011" =>	
 					--OR
 					rd <= rs1 or rs2;								
@@ -237,12 +349,9 @@ begin
 						
 						rd((16*i + 15) downto 16*i) <= std_logic_vector(count);
 					end loop;    
-																 
-																 
+																 									 
 				when "1101" =>	  
-					-- just making sure, each 16-bit halfword is rotated and not 32-bit word, right??
 					--RLH
-					
 					for i in 0 to 7 loop   
 						num := 0;	  
 						loop_cont := to_integer(unsigned(rs2((16*i + 3) downto 16*i)));
@@ -260,29 +369,48 @@ begin
 							
 							num := num + 1;
 						end loop;
-		
 					end loop;	
 					
-				
 				when "1110" =>
+					--SFWU
 					for i in 0 to 3 loop
-        				-- Perform unsigned subtraction for each 32-bit segment
-        					rd((32 * (i + 1) - 1) downto 32 * i) <= 
-            					std_logic_vector(unsigned(rs2((32 * (i + 1) - 1) downto 32 * i)) -
-                           	unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)));
-							   
-   					end loop;	
+       				 -- Perform unsigned subtraction for each 32-bit segment   	
+       					dif_uns := unsigned(rs1((32 * (i + 1) - 1) downto 32 * i)) -
+							unsigned(rs2((32 * (i + 1) - 1) downto 32 * i));	  
+						
+							if (dif_uns < unsigned(x"00000000")) then 		 --overflow
+								rd((32 * (i + 1) - 1) downto 32 * i) <= x"00000000";	
+							else 
+								rd((32 * (i + 1) - 1) downto 32 * i) <= std_logic_vector(dif_uns);
+							end if; 	
+   					 end loop;	
 				
 				when "1111" =>
-					rd <= x"00000000000000000000000000000000";		 --SFHS
-				
+					--SFHS
+					for i in 0 to 7 loop
+						dif := signed(rs1((16*i + 15) downto 16*i)) - signed(rs2((16*i + 15) downto 16*i)); 
+						
+						if (signed(rs1((16*i + 15) downto 16*i)) > 0 and 
+							signed(rs2((16*i + 15) downto 16*i)) > 0 and dif < 0) then
+							
+							 rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(32767, 16)); 
+							
+						elsif (signed(rs1((16*i + 15) downto 16*i)) < 0 
+							and signed(rs1((16*i + 15) downto 16*i)) > 0 and dif > 0) then
+							
+							rd((16*i + 15) downto 16*i) <= std_logic_vector(to_signed(-32768, 16)); 
+							
+						else
+							rd((16*i + 15) downto 16*i) <= std_logic_vector(dif); 
+						end if;
+					end loop;
+					
 				when others =>
-					rd <= x"00000000000000000000000000000000";		 --temp		  
+					var1 := x"00000000";		 --temp		  
 				
 			end case;
 		
 		end if;
-	
 	
 	end process;
 	
